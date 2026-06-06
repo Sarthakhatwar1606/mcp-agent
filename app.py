@@ -504,9 +504,6 @@ for k, v in {"messages": [], "chat_model": "llama3.2:3b", "tool_history": []}.it
     if k not in st.session_state:
         st.session_state[k] = v
 
-# Auto-seed on first run (important on cloud where data/ is not committed)
-_auto_seed()
-
 
 def is_seeded() -> bool:
     return DB_PATH.exists()
@@ -527,6 +524,10 @@ def _auto_seed():
         ok, log = seed_data()
         return ok, log
     return True, "already seeded"
+
+
+# Auto-seed on first run (important on cloud where data/ is not committed)
+_auto_seed()
 
 
 def db_query(sql: str):
