@@ -1,3 +1,4 @@
+import compat  # noqa: F401 — must be first, stubs broken protobuf modules
 import json
 import subprocess
 import sys

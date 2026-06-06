@@ -1,6 +1,10 @@
 """MCP server — ChromaDB vector/semantic search (Vector Search replacement, free)."""
-import json
+import sys
 from pathlib import Path
+sys.path.insert(0, str(Path(__file__).parent.parent))
+import compat  # noqa: F401 — stubs broken protobuf modules before chromadb loads
+
+import json
 
 import chromadb
 from mcp.server.fastmcp import FastMCP
