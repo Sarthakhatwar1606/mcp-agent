@@ -1,4 +1,5 @@
 """Seed sample enterprise data into DuckDB (catalog) and ChromaDB (vector search)."""
+import compat  # noqa: F401 — must be first, fixes Python 3.14 protobuf crash
 import json
 from pathlib import Path
 

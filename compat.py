@@ -1,12 +1,13 @@
 """
-Stub broken opentelemetry gRPC/protobuf modules before chromadb imports them.
-These modules use C-extension protobuf generated files that crash on Python 3.14.
-chromadb only needs them for optional telemetry export — stubbing them is safe.
+Fixes chromadb + Python 3.14 incompatibility.
+Must be imported before chromadb in every file (including subprocesses).
 """
 import os
 import sys
 from unittest.mock import MagicMock
 
+# Force pure-Python protobuf — the C extension is broken on Python 3.14
+os.environ["PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION"] = "python"
 os.environ.setdefault("ANONYMIZED_TELEMETRY", "False")
 os.environ.setdefault("CHROMA_ANONYMIZED_TELEMETRY", "False")
 
