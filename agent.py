@@ -1,5 +1,6 @@
-"""LangGraph ReAct agent that orchestrates MCP tool-calling servers."""
+"""LangGraph ReAct agent — uses Groq (cloud) or Ollama (local) depending on env."""
 import asyncio
+import os
 import queue
 import sys
 import threading
@@ -22,9 +23,18 @@ Always use the tools to retrieve accurate data before answering.
 Be concise and present numbers/results in a readable format."""
 
 
+def _make_llm(model: str):
+    groq_key = os.environ.get("GROQ_API_KEY", "")
+    if groq_key:
+        from langchain_groq import ChatGroq
+        return ChatGroq(model=model, temperature=0, api_key=groq_key)
+    else:
+        from langchain_ollama import ChatOllama
+        return ChatOllama(model=model, temperature=0)
+
+
 async def _stream_agent(question: str, model: str):
     from langchain_mcp_adapters.client import MultiServerMCPClient
-    from langchain_ollama import ChatOllama
     from langgraph.prebuilt import create_react_agent
 
     server_cfg = {
@@ -41,20 +51,15 @@ async def _stream_agent(question: str, model: str):
     }
 
     client = MultiServerMCPClient(server_cfg)
-    tools = await client.get_tools()
+    tools  = await client.get_tools()
+    llm    = _make_llm(model)
+    agent  = create_react_agent(llm, tools)
 
-    llm   = ChatOllama(model=model, temperature=0)
-    agent = create_react_agent(llm, tools)
-
-    messages = [SystemMessage(content=SYSTEM_PROMPT), HumanMessage(content=question)]
-
+    messages     = [SystemMessage(content=SYSTEM_PROMPT), HumanMessage(content=question)]
     seen_calls   = set()
     seen_results = set()
 
-    async for chunk in agent.astream(
-        {"messages": messages},
-        stream_mode="updates",
-    ):
+    async for chunk in agent.astream({"messages": messages}, stream_mode="updates"):
         for _, node_data in chunk.items():
             for msg in node_data.get("messages", []):
                 if isinstance(msg, AIMessage):
@@ -69,14 +74,10 @@ async def _stream_agent(question: str, model: str):
                 elif isinstance(msg, ToolMessage):
                     if msg.tool_call_id not in seen_results:
                         seen_results.add(msg.tool_call_id)
-                        yield {
-                            "type":    "tool_result",
-                            "tool":    msg.name,
-                            "content": msg.content[:600],
-                        }
+                        yield {"type": "tool_result", "tool": msg.name, "content": msg.content[:600]}
 
 
-def run_agent(question: str, model: str = "llama3.2") -> Generator[dict, None, None]:
+def run_agent(question: str, model: str = "llama3.2:3b") -> Generator[dict, None, None]:
     """Synchronous generator wrapper — safe to call from Streamlit."""
     q: queue.Queue = queue.Queue()
 

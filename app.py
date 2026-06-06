@@ -469,6 +469,9 @@ DATA_DIR    = Path(__file__).parent / "data"
 DB_PATH     = DATA_DIR / "catalog.duckdb"
 CHROMA_PATH = str(DATA_DIR / "chromadb")
 
+import os as _os
+_ON_CLOUD = bool(_os.environ.get("GROQ_API_KEY", ""))
+
 OLLAMA_MODELS = {
     "llama3.2:3b  — recommended":  "llama3.2:3b",
     "llama3.2:1b  — smallest":     "llama3.2:1b",
@@ -476,6 +479,12 @@ OLLAMA_MODELS = {
     "phi3.5:mini  — 2.2 GB":       "phi3.5:mini",
     "mistral      — 4.1 GB":       "mistral",
 }
+GROQ_MODELS = {
+    "llama-3.3-70b  — best (Groq)":    "llama-3.3-70b-versatile",
+    "llama-3.1-8b   — fast (Groq)":    "llama-3.1-8b-instant",
+    "mixtral-8x7b   — balanced (Groq)": "mixtral-8x7b-32768",
+}
+MODELS = GROQ_MODELS if _ON_CLOUD else OLLAMA_MODELS
 
 SAMPLE_QUESTIONS = [
     "What tables are in the data catalog?",
@@ -593,8 +602,12 @@ with st.sidebar:
 
     st.divider()
     st.markdown('<span class="section-label">Model</span>', unsafe_allow_html=True)
-    label = st.selectbox("model", list(OLLAMA_MODELS.keys()), label_visibility="collapsed")
-    st.session_state.chat_model = OLLAMA_MODELS[label]
+    if _ON_CLOUD:
+        st.markdown("<span style='font-size:0.72rem;color:#34D399'>☁️ Groq API detected</span>", unsafe_allow_html=True)
+    else:
+        st.markdown("<span style='font-size:0.72rem;color:#F59E0B'>🖥️ Local Ollama mode</span>", unsafe_allow_html=True)
+    label = st.selectbox("model", list(MODELS.keys()), label_visibility="collapsed")
+    st.session_state.chat_model = MODELS[label]
     st.markdown(f"<code style='font-size:0.75rem;color:#6366F1'>{st.session_state.chat_model}</code>",
                 unsafe_allow_html=True)
 
