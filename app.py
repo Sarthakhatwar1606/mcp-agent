@@ -1,4 +1,6 @@
 import json
+import subprocess
+import sys
 from pathlib import Path
 
 import chromadb
@@ -501,18 +503,29 @@ for k, v in {"messages": [], "chat_model": "llama3.2:3b", "tool_history": []}.it
     if k not in st.session_state:
         st.session_state[k] = v
 
+# Auto-seed on first run (important on cloud where data/ is not committed)
+_auto_seed()
+
 
 def is_seeded() -> bool:
     return DB_PATH.exists()
 
 
 def seed_data():
-    import subprocess
     r = subprocess.run(
-        ["python", str(Path(__file__).parent / "seed_data.py")],
+        [sys.executable, str(Path(__file__).parent / "seed_data.py")],
         capture_output=True, text=True,
     )
     return r.returncode == 0, r.stdout + r.stderr
+
+
+@st.cache_resource(show_spinner="Seeding data for first run…")
+def _auto_seed():
+    """Run once per deployment — seeds databases if they don't exist yet."""
+    if not is_seeded():
+        ok, log = seed_data()
+        return ok, log
+    return True, "already seeded"
 
 
 def db_query(sql: str):
